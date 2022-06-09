@@ -42,7 +42,7 @@ def welcome():
         f"<b><u>Full Listing of All Stations in the latest dataset:</b></u><br/><br/>"
         f"/api/v1.0/stations<br/><br/><br/>"
 
-        f"<b><u>Data for the most active station over the time period:</b></u><br/><br/>"
+        f"<b><u>Temperature Data for the most active station over the time period:</b></u><br/><br/>"
         f"/api/v1.0/tobs<br/><br/><br/>"
 
         f"--------------------------------------------------------------------------------------------------------<br/>"
@@ -53,26 +53,33 @@ def welcome():
         f"<i>Returns a JSON list of the minimum temperature (TMIN), the average temperature (TAVG),</i><br/>"
         f"<i>and the max temperature (TMAX) for all dates equal to or greater than the given date.<br/> (Enter Date in this format - <b><u><i>YYYY-MM-DD</b></u></i>)<br/><br>"
 
-        f"</i>/api/v1.0/<start><br/><br/><br/>"
+        f"</i>/api/v1.0/temp/<start><br/><br/><br/>"
 
         f"<b><u>Start/End Date Range:</u></b></b><br>"
         f"<i>Returns a JSON list of the minimum temperature (TMIN), the average temperature (TAVG),</i><br/>"
         f"<i>and the max temperature (TMAX) for dates between a given start date and end date inclusive. <br/>"
         f"(Enter Dates in this format - <b><u><i>YYYY-MM-DD/YYYY-MM-DD</b></u></i>)<br/><br>"
-        f"/api/v1.0/<start>/<end>"
+        f"/api/v1.0/temp/<start>/<end>"
     )
+
+# Precipitation Route
 @app.route("/api/v1.0/precipitation")
 def precipitation():
    """Return the precipitation data for the last year"""
    # Calculate the date 1 year ago from last date in database
    prev_year = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
    # Query for the date and precipitation for the last year
    precipitation = session.query(Measurement.date, Measurement.prcp).\
-       filter(Measurement.date >= prev_year).all()
+        filter(Measurement.date >= prev_year).all()
    session.close()
+   
    # Dict with date as the key and prcp as the value
    precip = {date: prcp for date, prcp in precipitation}
+   #precip = [{"Date": result[0], "Precip": result[1]} for result in precip]
    return jsonify(precip)
+
+# Stations Route
 @app.route("/api/v1.0/stations")
 def stations():
    """Return a list of stations."""
@@ -95,6 +102,8 @@ def temp_monthly():
    temps = list(np.ravel(results))
    # Return the results
    return jsonify(temps=temps)
+
+# Specify a date/range Route
 @app.route("/api/v1.0/temp/<start>")
 @app.route("/api/v1.0/temp/<start>/<end>")
 def stats(start=None, end=None):
@@ -102,22 +111,12 @@ def stats(start=None, end=None):
    # Select statement
    sel = [func.min(Measurement.tobs), func.avg(Measurement.tobs), func.max(Measurement.tobs)]
    if not end:
-       # start = dt.datetime.strptime(start, "%m/%d/%Y")
-       # # calculate TMIN, TAVG, TMAX for dates greater than start
-       # results = session.query(*sel).\
-       #     filter(Measurement.date >= start).all()
-       # # Unravel results into a 1D array and convert to a list
-       # temps = list(np.ravel(results))
-       # return jsonify(temps)
-       start = dt.datetime.strptime(start, "%d%m%y")
        results = session.query(*sel).\
            filter(Measurement.date >= start).all()
        session.close()
        temps = list(np.ravel(results))
        return jsonify(temps)
-   # calculate TMIN, TAVG, TMAX with start and stop
-   start = dt.datetime.strptime(start, "%d%m%y")
-   end = dt.datetime.strptime(end, "%d%m%y")
+
    results = session.query(*sel).\
        filter(Measurement.date >= start).\
         filter(Measurement.date <= end).all()
@@ -129,6 +128,3 @@ def stats(start=None, end=None):
 
 if __name__ == '__main__':
    app.run()
-
-
-   # Just need to get the dates to work website using the date format in the file...
